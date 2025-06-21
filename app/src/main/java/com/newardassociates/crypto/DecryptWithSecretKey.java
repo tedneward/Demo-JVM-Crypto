@@ -2,17 +2,13 @@ package com.newardassociates.crypto;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import javax.crypto.KeyGenerator;
 
 public class DecryptWithSecretKey extends Command {
     public static final String ALGORITHM = GenerateSecretKey.ALGORITHM;
 
     public String command() { return "decsec"; }
     public String args() { return "<KEY> <SRC> <DEST>"; }
-    public String description() { return "Decrypt SRC using secret key KEY.key to DEST"; }
+    public String description() { return "Decrypt SRC using secret key KEY to DEST"; }
     public void execute(String... args) throws Exception {
         String keyfile = args[0];
         String cipherfile = args[1];

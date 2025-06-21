@@ -3,15 +3,15 @@ package com.newardassociates.crypto;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
-import javax.crypto.SecretKey;
-import javax.crypto.KeyGenerator;
+import java.util.Objects;
 
 public class Crypto {
 
     static void outDest(String dest, byte[] data) throws Exception {
-        if (dest != "") {
+        if (!Objects.equals(dest, "")) {
             try (FileOutputStream fos = new FileOutputStream(dest.substring(1))) {
                 fos.write(data);
             }
@@ -21,7 +21,7 @@ public class Crypto {
         }
     }
     static byte[] inSource(String src) throws Exception {
-        byte[] data = {};
+        byte[] data;
         if (src.startsWith("@")) {
             File f = new File(src.substring(1));
             int length = (int)f.length();
@@ -31,12 +31,13 @@ public class Crypto {
             }
         }
         else {
-            data = src.getBytes("UTF-8");
+            data = src.getBytes(StandardCharsets.UTF_8);
         }
         return data;
     }
 
     static List<Command> commands = Arrays.asList(
+        new GenerateDigest(),
         new GenerateSecretKey(),
         new EncryptWithSecretKey(),
         new DecryptWithSecretKey(),
@@ -69,7 +70,7 @@ public class Crypto {
     public static void usage() {
         System.out.println("java Crypto [command] [args...]");
         System.out.println();
-        System.out.println("\twhere [commands] is one of:");
+        System.out.println("... where [command] is one of:");
         System.out.println();
         for (Command c : commands) {
             System.out.println(c.command() + " " + c.args() + ": " + c.description());

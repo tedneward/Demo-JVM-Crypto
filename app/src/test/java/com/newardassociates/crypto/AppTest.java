@@ -3,14 +3,148 @@
  */
 package com.newardassociates.crypto;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class AppTest {
+
+    public static final String SECRET = "secret";
+    public static final String PUBPRIV = "pubpriv";
+
     @Test void appHasCommands() {
         assertNotNull(Crypto.commands);
-        assertTrue(Crypto.commands.size() > 0);
+        assertFalse(Crypto.commands.isEmpty());
     }
 
     // Work through a few commands in sequence to ensure they work together as expected
+    @Test void generateSymmetricKey() {
+        assertDoesNotThrow( () -> {
+            new GenerateSecretKey().execute(SECRET);
+
+            assertTrue(Files.exists(Path.of(SECRET + ".key")));
+        });
+    }
+    @Test void generateAsymmetricKey() {
+        assertDoesNotThrow( () -> {
+            new GenerateAsymmetricKey().execute(PUBPRIV);
+
+            assertTrue(Files.exists(Path.of(PUBPRIV + ".keypair")));
+            assertTrue(Files.exists(Path.of(PUBPRIV + ".prv")));
+            assertTrue(Files.exists(Path.of(PUBPRIV + ".pub")));
+        });
+    }
+    @Test void symmetricEncryptDecryptCycle() {
+        assertDoesNotThrow( () -> {
+            String secretMessage = "Hello world";
+
+            new GenerateSecretKey().execute(SECRET);
+
+            String[] args = {
+                    SECRET,
+                    secretMessage,
+                    "@encrypted.message"
+            };
+            new EncryptWithSecretKey().execute(args);
+
+            args[1] = "@encrypted.message";
+            args[2] = "@decrypted.message";
+            new DecryptWithSecretKey().execute(args);
+
+            String decryptedMessage = Files.readString(Path.of("decrypted.message"));
+            assertEquals(secretMessage, decryptedMessage);
+        });
+    }
+
+    @Test void asymmetricPrivateEncryptPublicDecryptCycle() {
+        assertDoesNotThrow( () -> {
+            String secretMessage = "Hello world";
+
+            new GenerateAsymmetricKey().execute(PUBPRIV);
+
+            String[] args = {
+                    PUBPRIV,
+                    secretMessage,
+                    "@encrypted.message"
+            };
+            new EncryptWithPrivateKey().execute(args);
+
+            args[1] = "@encrypted.message";
+            args[2] = "@decrypted.message";
+            new DecryptWithPublicKey().execute(args);
+
+            String decryptedMessage = Files.readString(Path.of("decrypted.message"));
+            assertEquals(secretMessage, decryptedMessage);
+        });
+    }
+
+    @Test void asymmetricPublicEncryptPrivateDecryptCycle() {
+        assertDoesNotThrow( () -> {
+            String secretMessage = "Hello world";
+
+            new GenerateAsymmetricKey().execute(PUBPRIV);
+
+            String[] args = {
+                    PUBPRIV,
+                    secretMessage,
+                    "@encrypted.message"
+            };
+            new EncryptWithPublicKey().execute(args);
+
+            args[1] = "@encrypted.message";
+            args[2] = "@decrypted.message";
+            new DecryptWithPrivateKey().execute(args);
+
+            String decryptedMessage = Files.readString(Path.of("decrypted.message"));
+            assertEquals(secretMessage, decryptedMessage);
+        });
+    }
+
+    @Test void generateDigest() {
+        assertDoesNotThrow( () -> {
+            String publicMessage = "Hello world";
+            String[] args = {
+                    publicMessage,
+                    "@message.digest"
+            };
+            new GenerateDigest().execute(args);
+
+            byte[] publicDigest = Crypto.inSource("@message.digest");
+
+            // Let's try generating digests of messages that are really close but not the same.
+            // This is to simulate the idea that we've tampered slightly with the message and
+            // want to get the same hash back.
+            args[0] = "hello world";
+            new GenerateDigest().execute(args);
+            byte[] alt1Digest = Crypto.inSource("@message.digest");
+            assertNotEquals(publicDigest, alt1Digest);
+
+            args[0] = "hello World";
+            new GenerateDigest().execute(args);
+            byte[] alt2Digest = Crypto.inSource("@message.digest");
+            assertNotEquals(publicDigest, alt2Digest);
+        });
+    }
+
+    @AfterAll static void cleanupFiles() {
+        List<String> files = Arrays.asList(
+                SECRET + ".key",
+                PUBPRIV + ".keypair",
+                PUBPRIV + ".prv",
+                PUBPRIV + ".pub",
+                "encrypted.message",
+                "decrypted.message",
+                "message.digest"
+        );
+        for (String file : files) {
+            try { Files.delete(Path.of(file)); }
+            catch (java.io.IOException ioEx) { /* Eat the exception */ }
+        }
+    }
 }
